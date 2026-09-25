@@ -4,6 +4,8 @@ import asyncio
 import inspect
 import re
 from collections import defaultdict, deque
+from collections.abc import Awaitable, Callable
+from dataclasses import dataclass
 from typing import Any
 
 from viper.engine.interpolator import resolve_inputs
@@ -16,6 +18,19 @@ from viper.engine.models import (
 from viper.engine.registry import StageRegistry, global_registry
 
 STAGE_DEP_PATTERN = re.compile(r'stages\.([a-zA-Z0-9_-]+)')
+
+StageStartHook = Callable[[str], Awaitable[None]]
+StageCompleteHook = Callable[[str, Any], Awaitable[None]]
+StageErrorHook = Callable[[str, Exception], Awaitable[None]]
+
+
+@dataclass
+class StageHooks:
+    """Optional callbacks for stage lifecycle observation."""
+
+    on_start: StageStartHook | None = None
+    on_complete: StageCompleteHook | None = None
+    on_error: StageErrorHook | None = None
 
 
 class Orchestrator:
@@ -94,11 +109,12 @@ class Orchestrator:
     async def _execute_dag(
         self,
         manifest: PipelineManifest,
-        stages_by_id: dict[str, PipelineStageConfig],
         deps: dict[str, set[str]],
         context: dict[str, Any],
+        hooks: StageHooks,
     ) -> dict[str, Any]:
         """Iterate through topologically sorted ready stage batches."""
+        stages_by_id = {s.id: s for s in manifest.stages}
         completed_stages: set[str] = set()
 
         while len(completed_stages) < len(manifest.stages):
@@ -116,8 +132,17 @@ class Orchestrator:
             async def _run_and_record(
                 cfg: PipelineStageConfig,
             ) -> tuple[str, Any]:
-                output = await self._execute_stage(cfg, context)
-                return cfg.id, output
+                if hooks.on_start:
+                    await hooks.on_start(cfg.id)
+                try:
+                    output = await self._execute_stage(cfg, context)
+                    if hooks.on_complete:
+                        await hooks.on_complete(cfg.id, output)
+                    return cfg.id, output
+                except Exception as exc:
+                    if hooks.on_error:
+                        await hooks.on_error(cfg.id, exc)
+                    raise
 
             tasks = [_run_and_record(cfg) for cfg in ready_stages]
             results = await asyncio.gather(*tasks)
@@ -135,9 +160,12 @@ class Orchestrator:
         self,
         manifest: PipelineManifest,
         inputs: dict[str, Any],
+        *,
+        on_stage_start: StageStartHook | None = None,
+        on_stage_complete: StageCompleteHook | None = None,
+        on_stage_error: StageErrorHook | None = None,
     ) -> RunResult:
         """Run the complete pipeline DAG to completion."""
-        stages_by_id = {s.id: s for s in manifest.stages}
         deps = {s.id: self._extract_dependencies(s) for s in manifest.stages}
 
         # Validate DAG structure before starting execution
@@ -147,10 +175,18 @@ class Orchestrator:
             'inputs': inputs,
             'stages': {},
         }
+        hooks = StageHooks(
+            on_start=on_stage_start,
+            on_complete=on_stage_complete,
+            on_error=on_stage_error,
+        )
 
         try:
             stage_outputs = await self._execute_dag(
-                manifest, stages_by_id, deps, context
+                manifest,
+                deps,
+                context,
+                hooks,
             )
             return RunResult(
                 status=RunStatus.COMPLETED,

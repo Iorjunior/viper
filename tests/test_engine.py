@@ -255,3 +255,58 @@ async def test_orchestrator_stage_failure() -> None:
 
     assert run_result.status == RunStatus.FAILED
     assert 'Fatal processing error' in str(run_result.error)
+
+
+@pytest.mark.asyncio
+async def test_orchestrator_observability_hooks() -> None:
+    registry = StageRegistry()
+    events: list[tuple[str, str, Any]] = []
+
+    @stage(name='step_ok', registry=registry)
+    def ok_fn(val: int) -> int:
+        return val * 2
+
+    @stage(name='step_err', registry=registry)
+    def err_fn() -> None:
+        raise ValueError('boom')
+
+    manifest = PipelineManifest(
+        id='hook_test',
+        name='Hook Test',
+        stages=[
+            PipelineStageConfig(
+                id='first',
+                stage='step_ok',
+                inputs={'val': 5},
+            ),
+            PipelineStageConfig(
+                id='second',
+                stage='step_err',
+                inputs={},
+            ),
+        ],
+    )
+
+    async def on_start(stage_id: str) -> None:
+        events.append(('start', stage_id, None))
+
+    async def on_complete(stage_id: str, output: Any) -> None:
+        events.append(('complete', stage_id, output))
+
+    async def on_error(stage_id: str, exc: Exception) -> None:
+        events.append(('error', stage_id, str(exc)))
+
+    orchestrator = Orchestrator(registry=registry)
+    res = await orchestrator.run(
+        manifest,
+        inputs={},
+        on_stage_start=on_start,
+        on_stage_complete=on_complete,
+        on_stage_error=on_error,
+    )
+
+    assert res.status == RunStatus.FAILED
+    assert ('start', 'first', None) in events
+    assert ('complete', 'first', 10) in events
+    assert ('start', 'second', None) in events
+    assert ('error', 'second', 'boom') in events

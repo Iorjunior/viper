@@ -25,10 +25,18 @@ class RunRepository:
         """Fetch a run by unique identifier."""
         return await self.session.get(Run, run_id)
 
-    async def list(self, limit: int = 100, offset: int = 0) -> list[Run]:
+    async def list(
+        self,
+        limit: int = 100,
+        offset: int = 0,
+        status: str | None = None,
+    ) -> list[Run]:
         """List runs ordered by creation time descending."""
+        statement = select(Run)
+        if status is not None:
+            statement = statement.where(Run.status == status)
         statement = (
-            select(Run)
+            statement
             .order_by(col(Run.created_at).desc())
             .offset(offset)
             .limit(limit)
@@ -89,6 +97,16 @@ class StageRunRepository:
         statement = select(StageRun).where(StageRun.run_id == run_id)
         result = await self.session.exec(statement)
         return list(result.all())
+
+    async def get_by_stage(
+        self, run_id: str, stage_id: str
+    ) -> StageRun | None:
+        """Fetch a specific stage execution record by run ID and stage ID."""
+        statement = select(StageRun).where(
+            StageRun.run_id == run_id, StageRun.stage_id == stage_id
+        )
+        result = await self.session.exec(statement)
+        return result.first()
 
     async def update_status(
         self,

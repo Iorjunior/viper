@@ -9,9 +9,14 @@ import viper.stages  # noqa: F401 - ensure stages are registered
 from viper.db.models import Run
 from viper.db.repositories import RunRepository, StageRunRepository
 from viper.db.session import async_session_maker
-from viper.engine.manifest_loader import get_manifest, load_manifests_from_dir
+from viper.engine.manifest_loader import (
+    get_manifest,
+    load_manifests_from_dir,
+    register_manifest,
+)
 from viper.engine.models import PipelineManifest
 from viper.engine.registry import global_registry
+from viper.worker.queue import enqueue
 
 mcp_server = MCPServer('Viper')
 
@@ -58,6 +63,7 @@ async def run_pipeline(
     async with async_session_maker() as session:
         repo = RunRepository(session)
         created = await repo.create(run)
+        enqueue(created.id)
         return {
             'id': created.id,
             'pipeline_id': created.pipeline_id,
@@ -81,6 +87,8 @@ async def run_custom_pipeline(
     except Exception as exc:
         return {'error': f'Invalid pipeline manifest: {exc}'}
 
+    register_manifest(parsed_manifest)
+
     run = Run(
         pipeline_id=parsed_manifest.id,
         status='pending',
@@ -89,6 +97,7 @@ async def run_custom_pipeline(
     async with async_session_maker() as session:
         repo = RunRepository(session)
         created = await repo.create(run)
+        enqueue(created.id)
         return {
             'id': created.id,
             'pipeline_id': created.pipeline_id,
