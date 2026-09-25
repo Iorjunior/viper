@@ -219,3 +219,30 @@ async def test_websocket_broadcast(client: TestClient) -> None:
         data = websocket.receive_json()
         assert data['event'] == 'stage_progress'
         assert data['percent'] == 50
+
+
+def test_frontend_serving_index(client: TestClient) -> None:
+    """Test serving index.html on root path."""
+    response = client.get('/')
+    assert response.status_code == 200
+    assert '<html' in response.text.lower()
+
+
+def test_frontend_serving_spa_fallback(client: TestClient) -> None:
+    """Test SPA fallback on frontend client-side routes."""
+    response = client.get('/builder', headers={'Accept': 'text/html'})
+    assert response.status_code == 200
+    assert '<html' in response.text.lower()
+
+
+def test_frontend_serving_static_file(client: TestClient) -> None:
+    """Test serving existing static files from dist."""
+    response = client.get('/favicon.svg')
+    assert response.status_code == 200
+
+
+def test_frontend_does_not_mask_api_404(client: TestClient) -> None:
+    """Test non-existent API routes return 404 JSON, not HTML index."""
+    response = client.get('/api/non_existent_route')
+    assert response.status_code == 404
+    assert 'application/json' in response.headers.get('content-type', '')
