@@ -1,0 +1,17 @@
+{
+  "recommendations": [
+    // Python
+    "charliermarsh.ruff",
+    "ms-python.python",
+    "ms-python.vscode-pylance",
+
+    // Vue / Frontend
+    "Vue.volar",
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+
+    // General
+    "editorconfig.editorconfig",
+    "mikestead.dotenv"
+  ]
+}
