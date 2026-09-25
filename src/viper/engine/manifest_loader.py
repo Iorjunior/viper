@@ -59,6 +59,10 @@ class ManifestLoader:
         self._manifests = load_manifests_from_dir(self.pipelines_dir)
         return self._manifests
 
+    def register(self, manifest: PipelineManifest) -> None:
+        """Register an in-memory pipeline manifest."""
+        self._manifests[manifest.id] = manifest
+
     def get(self, manifest_id: str) -> PipelineManifest | None:
         """Retrieve a pipeline manifest by ID, loading if cache is empty."""
         if not self._manifests:
@@ -72,3 +76,8 @@ _global_loader = ManifestLoader()
 def get_manifest(manifest_id: str) -> PipelineManifest | None:
     """Retrieve a cached pipeline manifest by ID from global loader."""
     return _global_loader.get(manifest_id)
+
+
+def register_manifest(manifest: PipelineManifest) -> None:
+    """Register an in-memory pipeline manifest in global loader."""
+    _global_loader.register(manifest)

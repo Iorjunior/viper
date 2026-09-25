@@ -11,6 +11,7 @@ from viper.db.repositories import RunRepository
 from viper.db.session import get_session
 from viper.engine.manifest_loader import get_manifest, load_manifests_from_dir
 from viper.engine.models import PipelineManifest
+from viper.worker.queue import enqueue
 
 router = APIRouter(prefix='/api/pipelines', tags=['pipelines'])
 
@@ -58,4 +59,6 @@ async def trigger_pipeline_run(
         inputs=json.dumps(inputs),
     )
     repo = RunRepository(session)
-    return await repo.create(run)
+    created = await repo.create(run)
+    enqueue(created.id)
+    return created
