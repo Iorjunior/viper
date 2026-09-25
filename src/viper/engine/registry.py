@@ -33,6 +33,10 @@ class StageRegistry:
         """Retrieve a stage definition by unique name."""
         return self._stages.get(name)
 
+    def list_names(self) -> list[str]:
+        """List names of all currently registered stages."""
+        return list(self._stages.keys())
+
     def list_stages(self) -> list[StageDefinition]:
         """List all currently registered stage definitions."""
         return list(self._stages.values())

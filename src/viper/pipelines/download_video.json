@@ -1,0 +1,26 @@
+{
+  "id": "download_video",
+  "name": "Download Video",
+  "description": "Downloads video from YouTube or external URLs.",
+  "icon": "📥",
+  "tags": ["video", "download", "source"],
+  "builtin": true,
+  "inputs": {
+    "source": {
+      "type": "string",
+      "label": "YouTube URL or video link"
+    }
+  },
+  "stages": [
+    {
+      "id": "source",
+      "stage": "download_video",
+      "params": {
+        "source": "{{ inputs.source }}"
+      }
+    }
+  ],
+  "outputs": {
+    "video": "{{ stages.source.output }}"
+  }
+}

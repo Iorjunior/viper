@@ -1,0 +1,26 @@
+{
+  "id": "extract_audio",
+  "name": "Extract Audio",
+  "description": "Extracts audio track from a video file into WAV format.",
+  "icon": "🎵",
+  "tags": ["audio", "video", "ffmpeg"],
+  "builtin": true,
+  "inputs": {
+    "video": {
+      "type": "string",
+      "label": "Path to input video file"
+    }
+  },
+  "stages": [
+    {
+      "id": "audio",
+      "stage": "extract_audio",
+      "params": {
+        "video": "{{ inputs.video }}"
+      }
+    }
+  ],
+  "outputs": {
+    "audio": "{{ stages.audio.output }}"
+  }
+}
