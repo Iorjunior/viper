@@ -29,11 +29,11 @@ dependencies = [
     "demucs>=4.1",
     "yt-dlp>=2025.1",
     "tqdm>=4.70",
+    "openai>=1.0",
 ]
 
 [project.optional-dependencies]
 apple  = ["mlx-lm>=0.31", "mlx-whisper>=0.4"]
-remote = ["openai>=1.0"]
 dev    = ["pytest>=8.0", "pytest-asyncio>=0.24", "pytest-cov>=5.0", "ruff>=0.8", "pyright>=1.1"]
 
 [project.scripts]
@@ -61,6 +61,11 @@ extend-exclude = ['migrations']
 [tool.ruff.lint]
 preview = true
 select = ['I', 'F', 'E', 'W', 'PL', 'PT']
+
+[tool.ruff.lint.per-file-ignores]
+'tests/*' = ['PLR2004', 'PLR6301']
+
+
 
 [tool.ruff.format]
 preview = true
