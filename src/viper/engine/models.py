@@ -4,7 +4,7 @@ from collections.abc import Callable
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class RunStatus(str, Enum):
@@ -25,6 +25,7 @@ class PipelineInput(BaseModel):
     label: str | None = None
     required: bool = True
     default: Any = None
+    options: list[str] = Field(default_factory=list)
 
 
 class PipelineStageConfig(BaseModel):
@@ -35,6 +36,16 @@ class PipelineStageConfig(BaseModel):
     inputs: dict[str, Any] = Field(default_factory=dict)
     options: dict[str, Any] = Field(default_factory=dict)
 
+    @model_validator(mode='before')
+    @classmethod
+    def _normalize_params_to_inputs(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            params = data.get('params')
+            inputs = data.get('inputs')
+            if params is not None and not inputs:
+                data['inputs'] = params
+        return data
+
 
 class PipelineManifest(BaseModel):
     """Pipeline definition file schema defining both UX and DAG execution."""
@@ -43,7 +54,8 @@ class PipelineManifest(BaseModel):
     name: str
     description: str = ''
     stages: list[PipelineStageConfig] = Field(default_factory=list)
-    inputs: list[PipelineInput] = Field(default_factory=list)
+    inputs: list[PipelineInput] | dict[str, Any] = Field(default_factory=list)
+    outputs: dict[str, Any] = Field(default_factory=dict)
     builtin: bool = False
     icon: str = 'bolt'
     tags: list[str] = Field(default_factory=list)

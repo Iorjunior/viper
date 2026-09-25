@@ -1,0 +1,40 @@
+{
+  "id": "convert_video",
+  "name": "Convert Video",
+  "description": "Converts video container formats and changes resolution.",
+  "icon": "🔄",
+  "tags": ["video", "ffmpeg", "transcode"],
+  "builtin": true,
+  "inputs": {
+    "video": {
+      "type": "string",
+      "label": "Path to input video file"
+    },
+    "target_format": {
+      "type": "select",
+      "label": "Output Format",
+      "options": ["mp4", "webm", "mkv"],
+      "default": "mp4"
+    },
+    "resolution": {
+      "type": "select",
+      "label": "Target Resolution",
+      "options": ["original", "1080p", "720p", "480p"],
+      "default": "original"
+    }
+  },
+  "stages": [
+    {
+      "id": "convert",
+      "stage": "convert_video",
+      "params": {
+        "video": "{{ inputs.video }}",
+        "target_format": "{{ inputs.target_format }}",
+        "resolution": "{{ inputs.resolution }}"
+      }
+    }
+  ],
+  "outputs": {
+    "converted_video": "{{ stages.convert.output }}"
+  }
+}

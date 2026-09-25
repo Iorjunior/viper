@@ -1,0 +1,90 @@
+{
+  "id": "full_dubbing",
+  "name": "Full Video Dubbing",
+  "description": "Transcribes, translates, synthesizes new voiceover and renders dubbed video.",
+  "icon": "🎙️",
+  "tags": ["dubbing", "video", "speech", "ai"],
+  "builtin": true,
+  "inputs": {
+    "source": {
+      "type": "string",
+      "label": "YouTube URL or local video path"
+    },
+    "target_language": {
+      "type": "select",
+      "label": "Target Language",
+      "options": ["pt-BR", "en", "es", "fr", "de", "it", "ja"],
+      "default": "pt-BR"
+    },
+    "voice": {
+      "type": "select",
+      "label": "Voice",
+      "options": ["pf_dora", "pm_alex", "af_heart"],
+      "default": "pf_dora"
+    }
+  },
+  "stages": [
+    {
+      "id": "source",
+      "stage": "download_video",
+      "params": {
+        "source": "{{ inputs.source }}"
+      }
+    },
+    {
+      "id": "audio",
+      "stage": "extract_audio",
+      "params": {
+        "video": "{{ stages.source.output }}"
+      }
+    },
+    {
+      "id": "vocals",
+      "stage": "separate_vocals",
+      "params": {
+        "audio": "{{ stages.audio.output }}"
+      }
+    },
+    {
+      "id": "transcribe",
+      "stage": "transcribe",
+      "params": {
+        "audio": "{{ stages.vocals.output.vocals }}"
+      }
+    },
+    {
+      "id": "merge",
+      "stage": "merge_segments",
+      "params": {
+        "transcript": "{{ stages.transcribe.output }}"
+      }
+    },
+    {
+      "id": "translate",
+      "stage": "translate",
+      "params": {
+        "transcript": "{{ stages.merge.output }}",
+        "target_language": "{{ inputs.target_language }}"
+      }
+    },
+    {
+      "id": "speech",
+      "stage": "synthesize",
+      "params": {
+        "translation": "{{ stages.translate.output }}",
+        "voice": "{{ inputs.voice }}"
+      }
+    },
+    {
+      "id": "render",
+      "stage": "render_video",
+      "params": {
+        "video": "{{ stages.source.output }}",
+        "audio": "{{ stages.speech.output }}"
+      }
+    }
+  ],
+  "outputs": {
+    "dubbed_video": "{{ stages.render.output }}"
+  }
+}

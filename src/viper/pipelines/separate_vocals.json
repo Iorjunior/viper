@@ -1,0 +1,27 @@
+{
+  "id": "separate_vocals",
+  "name": "Separate Vocals",
+  "description": "Splits an audio track into isolated vocals and background music using Demucs.",
+  "icon": "✂️",
+  "tags": ["audio", "vocals", "demucs"],
+  "builtin": true,
+  "inputs": {
+    "audio": {
+      "type": "string",
+      "label": "Path to input audio file"
+    }
+  },
+  "stages": [
+    {
+      "id": "vocals",
+      "stage": "separate_vocals",
+      "params": {
+        "audio": "{{ inputs.audio }}"
+      }
+    }
+  ],
+  "outputs": {
+    "vocals": "{{ stages.vocals.output.vocals }}",
+    "background": "{{ stages.vocals.output.background }}"
+  }
+}

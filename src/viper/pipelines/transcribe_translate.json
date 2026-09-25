@@ -1,0 +1,47 @@
+{
+  "id": "transcribe_translate",
+  "name": "Transcribe & Translate",
+  "description": "Transcribes speech from audio and translates it to the target language.",
+  "icon": "📝",
+  "tags": ["speech", "stt", "translation", "llm"],
+  "builtin": true,
+  "inputs": {
+    "audio": {
+      "type": "string",
+      "label": "Path to input audio file"
+    },
+    "target_language": {
+      "type": "select",
+      "label": "Target Language",
+      "options": ["pt-BR", "en", "es", "fr", "de", "it", "ja"],
+      "default": "pt-BR"
+    }
+  },
+  "stages": [
+    {
+      "id": "transcribe",
+      "stage": "transcribe",
+      "params": {
+        "audio": "{{ inputs.audio }}"
+      }
+    },
+    {
+      "id": "merge",
+      "stage": "merge_segments",
+      "params": {
+        "transcript": "{{ stages.transcribe.output }}"
+      }
+    },
+    {
+      "id": "translate",
+      "stage": "translate",
+      "params": {
+        "transcript": "{{ stages.merge.output }}",
+        "target_language": "{{ inputs.target_language }}"
+      }
+    }
+  ],
+  "outputs": {
+    "transcript": "{{ stages.translate.output }}"
+  }
+}
