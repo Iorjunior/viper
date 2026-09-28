@@ -38,6 +38,22 @@ def test_source_download_video(tmp_path: Path) -> None:
         assert isinstance(video_asset, VideoAsset)
         assert video_asset.path == expected_video
 
+        # Test with source parameter instead of url
+        result_source = download_video(
+            source='https://youtube.com/watch?v=123',
+            output_dir=tmp_path,
+        )
+        assert isinstance(result_source['video'], VideoAsset)
+
+        # Test local file bypass without calling yt-dlp
+        local_result = download_video(source=str(expected_video))
+        assert isinstance(local_result['video'], VideoAsset)
+        assert local_result['video'].path == expected_video
+
+        # Test missing parameter raises ValueError
+        with pytest.raises(ValueError, match='Missing required'):
+            download_video()
+
 
 def test_source_load_local_file(tmp_path: Path) -> None:
     sample_file = tmp_path / 'test.mp4'

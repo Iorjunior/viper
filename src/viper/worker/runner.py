@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import logging
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -19,6 +20,8 @@ from viper.engine.models import RunResult, RunStatus
 from viper.engine.orchestrator import Orchestrator
 from viper.server.ws import ConnectionManager, ws_manager
 from viper.worker.queue import dequeue, enqueue_pending_from_db
+
+logger = logging.getLogger('viper.worker.runner')
 
 
 def serialize_output(obj: Any) -> Any:
@@ -97,6 +100,7 @@ class WorkerRunner:
 
     async def _record_stage_start(self, run_id: str, stage_id: str) -> None:
         """Create or update stage execution record to running status."""
+        logger.info("[Run %s] Stage '%s' started", run_id, stage_id)
         async with async_session_maker() as s:
             s_repo = StageRunRepository(s)
             existing = await s_repo.get_by_stage(run_id, stage_id)
@@ -119,6 +123,9 @@ class WorkerRunner:
         self, run_id: str, stage_id: str, output: Any
     ) -> None:
         """Mark stage run completed, persist assets, and broadcast update."""
+        logger.info(
+            "[Run %s] Stage '%s' completed successfully", run_id, stage_id
+        )
         serialized = serialize_output(output)
         output_json = json.dumps(serialized)
         async with async_session_maker() as s:
@@ -148,6 +155,13 @@ class WorkerRunner:
         self, run_id: str, stage_id: str, exc: Exception
     ) -> None:
         """Mark stage run as failed and broadcast failure event."""
+        logger.error(
+            "[Run %s] Stage '%s' failed: %s",
+            run_id,
+            stage_id,
+            exc,
+            exc_info=True,
+        )
         async with async_session_maker() as s:
             s_repo = StageRunRepository(s)
             existing = await s_repo.get_by_stage(run_id, stage_id)
@@ -175,6 +189,7 @@ class WorkerRunner:
         async with async_session_maker() as session:
             run_repo = RunRepository(session)
             if result.status == RunStatus.COMPLETED:
+                logger.info('[Run %s] Pipeline run COMPLETED', run_id)
                 serialized = serialize_output(result.stage_results)
                 await run_repo.update_status(
                     run_id=run_id,
@@ -191,6 +206,9 @@ class WorkerRunner:
                     },
                 )
             else:
+                logger.error(
+                    '[Run %s] Pipeline run FAILED: %s', run_id, result.error
+                )
                 await run_repo.update_status(
                     run_id=run_id,
                     status='failed',
@@ -208,14 +226,23 @@ class WorkerRunner:
 
     async def execute_run(self, run_id: str) -> Run | None:
         """Execute a single pipeline run identified by run_id."""
+        logger.info('[Run %s] Preparing execution', run_id)
         async with async_session_maker() as session:
             run_repo = RunRepository(session)
             run = await run_repo.get(run_id)
             if not run or run.status not in {'pending', 'running'}:
+                logger.info(
+                    '[Run %s] Skipping execution (current status: %s)',
+                    run_id,
+                    run.status if run else 'not found',
+                )
                 return run
 
             manifest = get_manifest(run.pipeline_id)
             if not manifest:
+                logger.error(
+                    "[Run %s] Pipeline '%s' not found", run_id, run.pipeline_id
+                )
                 await run_repo.update_status(
                     run_id=run_id,
                     status='failed',
@@ -246,6 +273,13 @@ class WorkerRunner:
             except Exception:
                 inputs = {}
 
+        logger.info(
+            "[Run %s] Executing pipeline '%s' with inputs: %s",
+            run_id,
+            run.pipeline_id,
+            inputs,
+        )
+
         result = await self.orchestrator.run(
             manifest,
             inputs,
@@ -269,6 +303,7 @@ class WorkerRunner:
     async def run_loop(self, poll_interval: float = 0.5) -> None:
         """Run continuous worker loop polling queue and database."""
         self._running = True
+        logger.info('Worker loop active (poll_interval=%.2fs)', poll_interval)
         while self._running:
             try:
                 await enqueue_pending_from_db()
@@ -277,9 +312,13 @@ class WorkerRunner:
                     await self.execute_run(run_id)
             except asyncio.CancelledError:
                 break
-            except Exception:
+            except Exception as exc:
+                logger.exception(
+                    'Unexpected exception in worker run_loop: %s', exc
+                )
                 await asyncio.sleep(poll_interval)
 
     def stop(self) -> None:
         """Signal the continuous runner loop to terminate."""
+        logger.info('Stopping worker loop...')
         self._running = False

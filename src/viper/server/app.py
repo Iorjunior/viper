@@ -1,7 +1,9 @@
 """FastAPI core application configuration and route registration."""
 
+import os
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
@@ -75,3 +77,13 @@ app.mount(
         )
     ),
 )
+
+
+# Serve static frontend build with client-side SPA routing fallback
+ui_dist = Path(
+    os.getenv(
+        'VIPER_UI_DIST',
+        Path(__file__).resolve().parents[3] / 'ui' / 'dist',
+    )
+)
+app.frontend('/', directory=ui_dist, fallback='index.html', check_dir=False)

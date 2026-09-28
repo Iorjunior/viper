@@ -15,13 +15,33 @@ except ImportError:
 
 @stage(
     name='download_video',
-    description='Download online video from URL using yt-dlp',
+    description='Download online video or load local file',
 )
 def download_video(
-    url: str,
+    source: str | None = None,
+    url: str | None = None,
     output_dir: Path | str | None = None,
 ) -> dict[str, Any]:
-    """Download video stream from YouTube or web source."""
+    """Download video stream or load local video file as asset."""
+    target_source = source or url
+    if not target_source:
+        msg = "Missing required 'source' or 'url' parameter"
+        raise ValueError(msg)
+
+    # Check if target_source is an existing local file
+    try:
+        local_path = Path(target_source).resolve()
+        if local_path.is_file():
+            return {
+                'video': VideoAsset(
+                    path=local_path,
+                    duration=None,
+                    resolution=None,
+                )
+            }
+    except Exception:
+        pass
+
     if yt_dlp is None:
         msg = 'yt-dlp is not installed. Install with uv add yt-dlp'
         raise ImportError(msg)
@@ -38,7 +58,7 @@ def download_video(
     }
 
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:  # type: ignore[arg-type]
-        info = ydl.extract_info(url, download=True)
+        info = ydl.extract_info(target_source, download=True)
         filename = ydl.prepare_filename(info)
         video_path = Path(filename)
 
