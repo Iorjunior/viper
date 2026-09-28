@@ -8,7 +8,11 @@ from viper.db.session import init_db
 from viper.engine.manifest_loader import ManifestLoader
 from viper.worker.runner import WorkerRunner
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(name)s: %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S',
+)
 logger = logging.getLogger('viper.worker')
 
 
