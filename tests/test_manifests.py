@@ -19,11 +19,11 @@ from viper.engine.registry import global_registry
 
 def test_pipeline_stage_config_params_fallback() -> None:
     """Ensure PipelineStageConfig supports params as an alias for inputs."""
-    cfg = PipelineStageConfig(
-        id='step1',
-        stage='extract_audio',
-        params={'video': 'test.mp4'},
-    )
+    cfg = PipelineStageConfig.model_validate({
+        'id': 'step1',
+        'stage': 'extract_audio',
+        'params': {'video': 'test.mp4'},
+    })
     assert cfg.inputs == {'video': 'test.mp4'}
 
 

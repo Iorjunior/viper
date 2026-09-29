@@ -1,5 +1,6 @@
 """Unit and integration tests for FastAPI REST API endpoints."""
 
+import os
 from collections.abc import AsyncGenerator, Generator
 from pathlib import Path
 from unittest.mock import patch
@@ -18,6 +19,33 @@ from viper.main import serve
 from viper.server.app import app
 from viper.server.routes.assets import stream_asset
 from viper.server.ws import ws_manager
+
+
+@pytest.fixture(autouse=True, scope='session')
+def ensure_test_frontend_assets() -> Generator[None, None, None]:
+    """Ensure minimal frontend artifacts exist for static serving tests."""
+    ui_dist = Path(
+        os.getenv(
+            'VIPER_UI_DIST',
+            Path(__file__).resolve().parents[1] / 'ui' / 'dist',
+        )
+    )
+    created: list[Path] = []
+    if not ui_dist.exists():
+        ui_dist.mkdir(parents=True, exist_ok=True)
+    for filename in ('index.html', 'favicon.svg'):
+        file_path = ui_dist / filename
+        if not file_path.exists():
+            file_path.write_text(
+                '<!DOCTYPE html><html><body>Viper</body></html>'
+                if filename.endswith('.html')
+                else '<svg></svg>',
+                encoding='utf-8',
+            )
+            created.append(file_path)
+    yield
+    for f in created:
+        f.unlink(missing_ok=True)
 
 
 @pytest.fixture

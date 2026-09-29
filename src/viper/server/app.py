@@ -86,4 +86,5 @@ ui_dist = Path(
         Path(__file__).resolve().parents[3] / 'ui' / 'dist',
     )
 )
+ui_dist.mkdir(parents=True, exist_ok=True)
 app.frontend('/', directory=ui_dist, fallback='index.html', check_dir=False)
