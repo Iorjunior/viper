@@ -7,12 +7,18 @@
 
   const route = useRoute()
   const router = useRouter()
-  const { pipelines, isLoading: isLoadingPipelines, loadPipelines } = usePipelines()
+  const {
+    pipelines,
+    isLoading: isLoadingPipelines,
+    loadPipelines,
+  } = usePipelines()
 
   const selectedPipelineId = ref<string>('')
   const isSubmitting = ref(false)
   const errorMessage = ref<string | null>(null)
-  const formValues = ref<Record<string, string | number | boolean | undefined>>({})
+  const formValues = ref<
+    Record<string, string | number | boolean | undefined>
+  >({})
 
   interface NormalizedInput {
     name: string
@@ -23,7 +29,9 @@
   }
 
   const selectedPipeline = computed<PipelineManifest | null>(() => {
-    return pipelines.value.find((p) => p.id === selectedPipelineId.value) || null
+    return (
+      pipelines.value.find((p) => p.id === selectedPipelineId.value) || null
+    )
   })
 
   const pipelineOptions = computed(() => {
@@ -66,10 +74,7 @@
     for (const input of normalizedInputs.value) {
       if (input.default !== undefined) {
         initial[input.name] = input.default as
-          | string
-          | number
-          | boolean
-          | undefined
+          string | number | boolean | undefined
       } else if (
         input.type === 'select' &&
         input.options &&
@@ -96,7 +101,8 @@
 
   onMounted(async () => {
     await loadPipelines()
-    const queryPipeline = (route.query.pipeline as string) || (route.params.pipelineId as string)
+    const queryPipeline =
+      (route.query.pipeline as string) || (route.params.pipelineId as string)
     if (queryPipeline && pipelines.value.some((p) => p.id === queryPipeline)) {
       selectedPipelineId.value = queryPipeline
     } else if (pipelines.value.length > 0) {
@@ -153,7 +159,10 @@
     </div>
 
     <!-- Loading Skeleton -->
-    <div v-if="isLoadingPipelines && !selectedPipeline" class="space-y-6 animate-pulse">
+    <div
+      v-if="isLoadingPipelines && !selectedPipeline"
+      class="space-y-6 animate-pulse"
+    >
       <div class="h-28 rounded-2xl bg-[var(--ui-bg-muted)]" />
       <div class="h-64 rounded-2xl bg-[var(--ui-bg-muted)]" />
     </div>
@@ -174,21 +183,37 @@
             :model-value="selectedPipelineId"
             :items="pipelineOptions"
             class="w-full"
-            @update:model-value="(val: unknown) => { selectedPipelineId = String(val ?? '') }"
+            @update:model-value="
+              (val: unknown) => {
+                selectedPipelineId = String(val ?? '')
+              }
+            "
           />
         </div>
 
-        <div v-if="selectedPipeline" class="pt-3 border-t border-[var(--ui-border)]/50 space-y-2">
+        <div
+          v-if="selectedPipeline"
+          class="pt-3 border-t border-[var(--ui-border)]/50 space-y-2"
+        >
           <div class="flex items-center space-x-2">
             <h2 class="text-lg font-bold">{{ selectedPipeline.name }}</h2>
-            <UBadge v-if="selectedPipeline.builtin" color="neutral" variant="subtle" size="xs">
+            <UBadge
+              v-if="selectedPipeline.builtin"
+              color="neutral"
+              variant="subtle"
+              size="xs"
+            >
               Builtin
             </UBadge>
           </div>
-          <p class="text-sm text-neutral-500 dark:text-neutral-400 leading-relaxed">
+          <p
+            class="text-sm text-neutral-500 dark:text-neutral-400 leading-relaxed"
+          >
             {{ selectedPipeline.description }}
           </p>
-          <div class="flex items-center gap-3 text-xs text-neutral-400 font-mono pt-1">
+          <div
+            class="flex items-center gap-3 text-xs text-neutral-400 font-mono pt-1"
+          >
             <span>{{ selectedPipeline.stages.length }} stages</span>
             <span>•</span>
             <span>ID: {{ selectedPipeline.id }}</span>
@@ -273,9 +298,15 @@
           </div>
 
           <!-- Action Buttons -->
-          <div class="flex items-center justify-end space-x-3 pt-4 border-t border-[var(--ui-border)]">
+          <div
+            class="flex items-center justify-end space-x-3 pt-4 border-t border-[var(--ui-border)]"
+          >
             <router-link to="/">
-              <UButton color="neutral" variant="outline" :disabled="isSubmitting">
+              <UButton
+                color="neutral"
+                variant="outline"
+                :disabled="isSubmitting"
+              >
                 Cancel
               </UButton>
             </router-link>

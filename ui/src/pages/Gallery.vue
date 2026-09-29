@@ -206,12 +206,10 @@
             {{ pipeline.stages.length }} stages
           </span>
 
-          <router-link :to="{ path: '/new', query: { pipeline: pipeline.id } }">
-            <UButton
-              color="primary"
-              size="sm"
-              icon="i-lucide-play"
-            >
+          <router-link
+            :to="{ path: '/new', query: { pipeline: pipeline.id } }"
+          >
+            <UButton color="primary" size="sm" icon="i-lucide-play">
               Run Pipeline
             </UButton>
           </router-link>

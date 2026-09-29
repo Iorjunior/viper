@@ -1,0 +1,16 @@
+services:
+  viper:
+    build: .
+    image: ghcr.io/viper-ai/viper:latest
+    ports:
+      - "8000:8000"
+    volumes:
+      - viper_data:/data
+    env_file:
+      - path: .env
+        required: false
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+volumes:
+  viper_data:
