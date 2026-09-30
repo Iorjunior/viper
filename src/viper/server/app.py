@@ -10,13 +10,16 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from mcp.server.transport_security import TransportSecuritySettings
 
-from viper.db.session import init_db
+from viper.config import set_runtime_setting
+from viper.db.repositories import SystemSettingRepository
+from viper.db.session import async_session_maker, init_db
 from viper.engine.manifest_loader import ManifestLoader
 from viper.server.mcp import mcp_server
 from viper.server.routes import (
     assets_router,
     pipelines_router,
     runs_router,
+    setup_router,
     stages_router,
 )
 from viper.server.ws import ws_manager
@@ -24,8 +27,13 @@ from viper.server.ws import ws_manager
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    """Lifespan event handling database initialization and manifest loading."""
+    """Lifespan event handling database init, config sync and manifests."""
     await init_db()
+    async with async_session_maker() as session:
+        repo = SystemSettingRepository(session)
+        settings = await repo.get_all()
+        for k, v in settings.items():
+            set_runtime_setting(k, v)
     ManifestLoader().load_all()
     yield
 
@@ -67,6 +75,7 @@ app.include_router(pipelines_router)
 app.include_router(stages_router)
 app.include_router(runs_router)
 app.include_router(assets_router)
+app.include_router(setup_router)
 
 # Mount Model Context Protocol (MCP) server SSE sub-application
 app.mount(

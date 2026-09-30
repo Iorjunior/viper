@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { useSetup } from '../composables/useSetup'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -27,6 +28,14 @@ const router = createRouter({
       path: '/new',
       name: 'run-form',
       component: () => import('../pages/RunForm.vue'),
+    },
+    {
+      path: '/setup',
+      redirect: () => {
+        const { openSetupModal } = useSetup()
+        openSetupModal()
+        return '/'
+      },
     },
     {
       path: '/:pathMatch(.*)*',

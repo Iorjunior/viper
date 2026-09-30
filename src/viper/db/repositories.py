@@ -1,11 +1,11 @@
 """Asynchronous data access repositories for database entities."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlmodel import col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from viper.db.models import Asset, Run, StageRun
+from viper.db.models import Asset, Run, StageRun, SystemSetting
 
 
 class RunRepository:
@@ -155,3 +155,39 @@ class AssetRepository:
         statement = select(Asset).where(Asset.run_id == run_id)
         result = await self.session.exec(statement)
         return list(result.all())
+
+
+class SystemSettingRepository:
+    """Repository handling key-value system settings."""
+
+    def __init__(self, session: AsyncSession) -> None:
+        self.session = session
+
+    async def get(self, key: str) -> str | None:
+        """Fetch a configuration value by key."""
+        setting = await self.session.get(SystemSetting, key)
+        return setting.value if setting else None
+
+    async def set(self, key: str, value: str) -> SystemSetting:
+        """Persist or update a configuration key-value pair."""
+        setting = await self.session.get(SystemSetting, key)
+        if setting:
+            setting.value = value
+            setting.updated_at = datetime.now(timezone.utc)
+        else:
+            setting = SystemSetting(key=key, value=value)
+        self.session.add(setting)
+        await self.session.commit()
+        await self.session.refresh(setting)
+        return setting
+
+    async def get_all(self) -> dict[str, str]:
+        """Fetch all configured key-value pairs as a dictionary."""
+        statement = select(SystemSetting)
+        result = await self.session.exec(statement)
+        return {item.key: item.value for item in result.all()}
+
+    async def set_many(self, settings: dict[str, str]) -> None:
+        """Persist or update multiple settings at once."""
+        for key, value in settings.items():
+            await self.set(key, str(value))

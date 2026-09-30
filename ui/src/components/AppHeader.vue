@@ -1,10 +1,12 @@
 <script setup lang="ts">
   import { useRoute } from 'vue-router'
   import { useDark, useToggle } from '@vueuse/core'
+  import { useSetup } from '../composables/useSetup'
 
   const isDark = useDark()
   const toggleDark = useToggle(isDark)
   const route = useRoute()
+  const { openSetupModal } = useSetup()
 </script>
 
 <template>
@@ -20,7 +22,7 @@
           <img
             src="/logo.png"
             alt="VIPER"
-            class="w-8 h-8 rounded-lg object-contain shadow-sm group-hover:scale-105 transition-transform"
+            class="w-8 h-8 object-contain group-hover:scale-105 transition-transform"
           />
           <div>
             <span class="font-bold text-lg tracking-tight">VIPER</span>
@@ -66,8 +68,17 @@
         </nav>
       </div>
 
-      <!-- Right actions: Theme -->
-      <div class="flex items-center space-x-3">
+      <!-- Right actions: Theme & Setup -->
+      <div class="flex items-center space-x-2">
+        <UButton
+          color="neutral"
+          variant="ghost"
+          size="sm"
+          icon="i-lucide-settings"
+          aria-label="Setup & Configuration"
+          @click="openSetupModal()"
+        />
+
         <UButton
           color="neutral"
           variant="ghost"

@@ -49,3 +49,11 @@ class Asset(SQLModel, table=True):
     path: str
     metadata_json: str = Field(default='{}')
     created_at: datetime = Field(default_factory=_utc_now)
+
+
+class SystemSetting(SQLModel, table=True):
+    """Application key-value configuration setting."""
+
+    key: str = Field(primary_key=True)
+    value: str
+    updated_at: datetime = Field(default_factory=_utc_now)

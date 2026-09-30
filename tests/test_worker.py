@@ -335,7 +335,7 @@ async def test_worker_run_loop_and_stop(memory_db: None) -> None:
         await asyncio.sleep(0.05)
         async with runner_mod.async_session_maker() as session:
             r = await RunRepository(session).get(run.id)
-            if r and r.status in ('completed', 'failed'):
+            if r and r.status in {'completed', 'failed'}:
                 break
 
     runner.stop()

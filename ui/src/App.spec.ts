@@ -12,6 +12,7 @@ describe('App', () => {
         { path: '/', component: { template: '<div>Gallery</div>' } },
         { path: '/runs', component: { template: '<div>Runs</div>' } },
         { path: '/builder', component: { template: '<div>Builder</div>' } },
+        { path: '/setup', component: { template: '<div>Setup</div>' } },
       ],
     })
 
