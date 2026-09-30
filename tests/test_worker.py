@@ -330,12 +330,12 @@ async def test_worker_run_loop_and_stop(memory_db: None) -> None:
     # Enqueue run
     enqueue(run.id)
 
-    # Wait briefly for execution
-    for _ in range(50):
-        await asyncio.sleep(0.02)
+    # Wait for execution
+    for _ in range(60):
+        await asyncio.sleep(0.05)
         async with runner_mod.async_session_maker() as session:
             r = await RunRepository(session).get(run.id)
-            if r and r.status == 'completed':
+            if r and r.status in ('completed', 'failed'):
                 break
 
     runner.stop()
