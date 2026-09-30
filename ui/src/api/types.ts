@@ -87,3 +87,63 @@ export interface WsStageEvent {
   status?: string
   stage_results?: Record<string, unknown>
 }
+
+export interface HardwareInfo {
+  platform: string
+  machine: string
+  device: 'apple_silicon' | 'cuda' | 'cpu'
+  is_apple_silicon: boolean
+  has_cuda: boolean
+  recommended_mode: 'local' | 'cloud'
+}
+
+export interface LocalModelInfo {
+  id: string
+  name: string
+  capability: string
+  repo_id: string
+  size_label: string
+  description: string
+  downloaded: boolean
+  apple_silicon_only?: boolean
+}
+
+export interface SetupStatus {
+  setup_completed: boolean
+  hardware: HardwareInfo
+  models: LocalModelInfo[]
+  current_config: {
+    stt_backend: string
+    stt_model: string
+    llm_backend: string
+    tts_backend: string
+    openai_base_url: string
+    openai_model: string
+    has_openai_key: boolean
+  }
+}
+
+export interface ValidateConnectionRequest {
+  provider?: string
+  base_url?: string
+  api_key?: string
+  model?: string
+}
+
+export interface ValidateConnectionResponse {
+  success: boolean
+  message: string
+  models_available?: string[]
+}
+
+export interface CompleteSetupRequest {
+  mode: string
+  stt_backend: string
+  stt_model: string
+  llm_backend: string
+  tts_backend: string
+  openai_base_url?: string
+  openai_api_key?: string
+  openai_model?: string
+}
+

@@ -120,14 +120,17 @@ All execution units in Viper are decorated Python functions registered with `@st
    from typing import Any
    from viper.engine.decorator import stage
 
+
    @stage(
-       name="normalize_audio",
-       description="Normalize audio loudness and convert to WAV",
+       name='normalize_audio',
+       description='Normalize audio loudness and convert to WAV',
    )
-   def normalize_audio(audio_path: str, target_db: float = -14.0) -> dict[str, Any]:
+   def normalize_audio(
+       audio_path: str, target_db: float = -14.0
+   ) -> dict[str, Any]:
        # Process media here...
-       normalized_path = "/path/to/output.wav"
-       return {"normalized_audio": normalized_path}
+       normalized_path = '/path/to/output.wav'
+       return {'normalized_audio': normalized_path}
    ```
 2. Ensure the stage is imported in `src/viper/stages/__init__.py`.
 3. Add a unit test in `tests/test_stages.py`.

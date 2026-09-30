@@ -34,6 +34,22 @@ def _has_cuda() -> bool:
         return False
 
 
+def detect_hardware() -> dict[str, Any]:
+    """Detect system environment, accelerators and suggested profile."""
+    is_mac_arm = _is_apple_silicon()
+    cuda = _has_cuda()
+    device = 'apple_silicon' if is_mac_arm else ('cuda' if cuda else 'cpu')
+    recommended_mode = 'local' if (is_mac_arm or cuda) else 'cloud'
+    return {
+        'platform': platform.system(),
+        'machine': platform.machine(),
+        'device': device,
+        'is_apple_silicon': is_mac_arm,
+        'has_cuda': cuda,
+        'recommended_mode': recommended_mode,
+    }
+
+
 def get_stt(**kwargs: Any) -> STTBackend:
     """Resolve and instantiate the configured or auto-detected STT backend."""
     backend = get_config_value('VIPER_STT_BACKEND', default='auto').lower()
@@ -52,7 +68,11 @@ def get_stt(**kwargs: Any) -> STTBackend:
         return MlxWhisperBackend(**kwargs)
 
     if backend == 'openai':
-        return OpenAISTTBackend(**kwargs)
+        api_key = kwargs.get(
+            'api_key',
+            get_config_value('OPENAI_API_KEY', default=OPENAI_API_KEY),
+        )
+        return OpenAISTTBackend(api_key=api_key or None, **kwargs)
 
     msg = f'Unsupported STT backend: {backend}'
     raise ValueError(msg)
@@ -61,14 +81,17 @@ def get_stt(**kwargs: Any) -> STTBackend:
 def get_llm(**kwargs: Any) -> LLMBackend:
     """Resolve and instantiate the configured or auto-detected LLM backend."""
     backend = get_config_value('VIPER_LLM_BACKEND', default='auto').lower()
+    base_url = get_config_value('OPENAI_BASE_URL', default=OPENAI_BASE_URL)
+    model = get_config_value('OPENAI_MODEL', default=OPENAI_MODEL)
+    api_key = get_config_value('OPENAI_API_KEY', default=OPENAI_API_KEY)
 
     if backend == 'auto':
         if _is_apple_silicon():
             return MlxLmBackend(**kwargs)
         return OpenAICompatibleBackend(
-            base_url=OPENAI_BASE_URL or None,
-            model=OPENAI_MODEL,
-            api_key=OPENAI_API_KEY or None,
+            base_url=base_url or None,
+            model=model,
+            api_key=api_key or None,
             **kwargs,
         )
 
@@ -77,9 +100,9 @@ def get_llm(**kwargs: Any) -> LLMBackend:
 
     if backend in {'openai', 'openai_compatible', 'compatible', 'ollama'}:
         return OpenAICompatibleBackend(
-            base_url=OPENAI_BASE_URL or None,
-            model=OPENAI_MODEL,
-            api_key=OPENAI_API_KEY or None,
+            base_url=base_url or None,
+            model=model,
+            api_key=api_key or None,
             **kwargs,
         )
 
@@ -95,7 +118,11 @@ def get_tts(**kwargs: Any) -> TTSBackend:
         return KokoroBackend(**kwargs)
 
     if backend == 'openai':
-        return OpenAITTSBackend(**kwargs)
+        api_key = kwargs.get(
+            'api_key',
+            get_config_value('OPENAI_API_KEY', default=OPENAI_API_KEY),
+        )
+        return OpenAITTSBackend(api_key=api_key or None, **kwargs)
 
     msg = f'Unsupported TTS backend: {backend}'
     raise ValueError(msg)
