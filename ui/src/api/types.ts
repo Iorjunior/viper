@@ -146,4 +146,3 @@ export interface CompleteSetupRequest {
   openai_api_key?: string
   openai_model?: string
 }
-

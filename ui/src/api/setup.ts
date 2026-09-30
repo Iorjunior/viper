@@ -17,10 +17,13 @@ export async function fetchSetupStatus(): Promise<SetupStatus> {
 export async function validateConnection(
   payload: ValidateConnectionRequest
 ): Promise<ValidateConnectionResponse> {
-  return request<ValidateConnectionResponse>('/api/setup/validate-connection', {
-    method: 'POST',
-    body: JSON.stringify(payload),
-  })
+  return request<ValidateConnectionResponse>(
+    '/api/setup/validate-connection',
+    {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }
+  )
 }
 
 export async function downloadModel(
@@ -38,8 +41,11 @@ export async function downloadModel(
 export async function completeSetup(
   payload: CompleteSetupRequest
 ): Promise<{ success: boolean; message: string }> {
-  return request<{ success: boolean; message: string }>('/api/setup/complete', {
-    method: 'POST',
-    body: JSON.stringify(payload),
-  })
+  return request<{ success: boolean; message: string }>(
+    '/api/setup/complete',
+    {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }
+  )
 }

@@ -86,7 +86,8 @@ describe('useSetup', () => {
       models_available: ['gpt-4o'],
     })
 
-    const { testConnection, connectionResult, isTestingConnection } = useSetup()
+    const { testConnection, connectionResult, isTestingConnection } =
+      useSetup()
     expect(isTestingConnection.value).toBe(false)
 
     const promise = testConnection()

@@ -58,7 +58,8 @@
   }
 
   const reviewModeLabel = computed(() => {
-    if (selectedMode.value === 'local') return '100% Local AI (Offline & Private)'
+    if (selectedMode.value === 'local')
+      return '100% Local AI (Offline & Private)'
     if (selectedMode.value === 'cloud') return 'Cloud AI (API Powered)'
     return 'Custom / Hybrid Configuration'
   })
@@ -110,7 +111,10 @@
   ]
 
   const sttModelOptions = [
-    { label: 'large-v3-turbo (Recommended - ~1.5 GB)', value: 'large-v3-turbo' },
+    {
+      label: 'large-v3-turbo (Recommended - ~1.5 GB)',
+      value: 'large-v3-turbo',
+    },
     { label: 'base (Fast & Lightweight - ~145 MB)', value: 'base' },
     { label: 'small (Balanced - ~480 MB)', value: 'small' },
   ]
@@ -706,7 +710,13 @@
             icon="i-lucide-arrow-right"
             @click="activeStep++"
           >
-            {{ activeStep === 1 ? 'Next: Providers' : activeStep === 2 ? 'Next: Models' : 'Next: Review' }}
+            {{
+              activeStep === 1
+                ? 'Next: Providers'
+                : activeStep === 2
+                  ? 'Next: Models'
+                  : 'Next: Review'
+            }}
           </UButton>
 
           <UButton

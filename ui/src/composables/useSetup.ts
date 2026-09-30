@@ -180,7 +180,9 @@ export function useSetup() {
       return true
     } catch (err: unknown) {
       error.value =
-        err instanceof Error ? err.message : 'Failed to save setup preferences.'
+        err instanceof Error
+          ? err.message
+          : 'Failed to save setup preferences.'
       return false
     } finally {
       isSubmitting.value = false
