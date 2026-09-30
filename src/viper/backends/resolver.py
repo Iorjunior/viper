@@ -16,8 +16,6 @@ from viper.backends.tts.base import TTSBackend
 from viper.backends.tts.kokoro import KokoroBackend
 from viper.backends.tts.openai import OpenAITTSBackend
 from viper.config import (
-    OLLAMA_HOST,
-    OLLAMA_MODEL,
     OPENAI_API_KEY,
     OPENAI_BASE_URL,
     OPENAI_MODEL,
@@ -68,28 +66,20 @@ def get_llm(**kwargs: Any) -> LLMBackend:
         if _is_apple_silicon():
             return MlxLmBackend(**kwargs)
         return OpenAICompatibleBackend(
-            base_url=f'{OLLAMA_HOST.rstrip("/")}/v1',
-            model=OLLAMA_MODEL,
-            api_key='ollama',
-            **kwargs,
-        )
-
-    if backend == 'ollama':
-        return OpenAICompatibleBackend(
-            base_url=f'{OLLAMA_HOST.rstrip("/")}/v1',
-            model=OLLAMA_MODEL,
-            api_key='ollama',
+            base_url=OPENAI_BASE_URL or None,
+            model=OPENAI_MODEL,
+            api_key=OPENAI_API_KEY or None,
             **kwargs,
         )
 
     if backend in {'mlx_lm', 'mlx-lm', 'mlx'}:
         return MlxLmBackend(**kwargs)
 
-    if backend in {'openai', 'openai_compatible', 'compatible'}:
+    if backend in {'openai', 'openai_compatible', 'compatible', 'ollama'}:
         return OpenAICompatibleBackend(
             base_url=OPENAI_BASE_URL or None,
             model=OPENAI_MODEL,
-            api_key=OPENAI_API_KEY,
+            api_key=OPENAI_API_KEY or None,
             **kwargs,
         )
 

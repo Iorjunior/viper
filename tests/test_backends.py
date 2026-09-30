@@ -135,7 +135,18 @@ def test_resolver_stt_auto_cpu(
 
 
 @patch('viper.backends.resolver.get_config_value')
-def test_resolver_llm_explicit_ollama(mock_config: MagicMock) -> None:
+def test_resolver_llm_explicit_openai(mock_config: MagicMock) -> None:
+    mock_config.side_effect = lambda key, default=None: {
+        'VIPER_LLM_BACKEND': 'openai',
+    }.get(key, default)
+
+    llm = get_llm()
+    assert isinstance(llm, LLMBackend)
+    assert llm.__class__.__name__ == 'OpenAICompatibleBackend'
+
+
+@patch('viper.backends.resolver.get_config_value')
+def test_resolver_llm_explicit_ollama_alias(mock_config: MagicMock) -> None:
     mock_config.side_effect = lambda key, default=None: {
         'VIPER_LLM_BACKEND': 'ollama',
     }.get(key, default)
@@ -143,7 +154,6 @@ def test_resolver_llm_explicit_ollama(mock_config: MagicMock) -> None:
     llm = get_llm()
     assert isinstance(llm, LLMBackend)
     assert llm.__class__.__name__ == 'OpenAICompatibleBackend'
-    assert str(getattr(llm, 'base_url', '')).endswith('/v1')
 
 
 @patch('viper.backends.resolver.get_config_value')

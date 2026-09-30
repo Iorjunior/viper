@@ -10,13 +10,25 @@ VIPER_STT_BACKEND: str = str(config('VIPER_STT_BACKEND', default='auto'))
 VIPER_LLM_BACKEND: str = str(config('VIPER_LLM_BACKEND', default='auto'))
 VIPER_TTS_BACKEND: str = str(config('VIPER_TTS_BACKEND', default='kokoro'))
 
-# --- Models ---------------------------------------------------------------
+# --- Models & API ---------------------------------------------------------
 WHISPER_MODEL: str = str(config('WHISPER_MODEL', default='large-v3-turbo'))
-OLLAMA_HOST: str = str(config('OLLAMA_HOST', default='http://localhost:11434'))
-OLLAMA_MODEL: str = str(config('OLLAMA_MODEL', default='qwen2.5:1.5b'))
 OPENAI_API_KEY: str = str(config('OPENAI_API_KEY', default=''))
-OPENAI_BASE_URL: str = str(config('OPENAI_BASE_URL', default=''))
-OPENAI_MODEL: str = str(config('OPENAI_MODEL', default='gpt-4o-mini'))
+_raw_ollama_host: str = str(config('OLLAMA_HOST', default=''))
+_default_base_url: str = (
+    f'{_raw_ollama_host.rstrip("/")}/v1' if _raw_ollama_host else ''
+)
+OPENAI_BASE_URL: str = str(
+    config('OPENAI_BASE_URL', default=_default_base_url)
+)
+OPENAI_MODEL: str = str(
+    config(
+        'OPENAI_MODEL',
+        default=str(config('OLLAMA_MODEL', default='gpt-4o-mini')),
+    )
+)
+# Backward-compatibility aliases
+OLLAMA_HOST: str = OPENAI_BASE_URL
+OLLAMA_MODEL: str = OPENAI_MODEL
 
 # --- Storage --------------------------------------------------------------
 DATABASE_URL: str = str(

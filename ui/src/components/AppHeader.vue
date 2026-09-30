@@ -17,14 +17,11 @@
       <!-- Brand & Navigation -->
       <div class="flex items-center space-x-8">
         <router-link to="/" class="flex items-center space-x-2.5 group">
-          <div
-            class="w-9 h-9 rounded-xl bg-lime-500/20 border border-lime-500/40 flex items-center justify-center text-lime-500 group-hover:bg-lime-500/30 transition-colors"
-          >
-            <UIcon
-              name="i-lucide-play"
-              class="w-5 h-5 text-lime-500 fill-current"
-            />
-          </div>
+          <img
+            src="/logo.png"
+            alt="VIPER"
+            class="w-8 h-8 rounded-lg object-contain shadow-sm group-hover:scale-105 transition-transform"
+          />
           <div>
             <span class="font-bold text-lg tracking-tight">VIPER</span>
           </div>
