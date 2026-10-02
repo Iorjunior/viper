@@ -103,11 +103,15 @@ def test_resolver_stt_explicit(mock_config: MagicMock) -> None:
     assert stt.__class__.__name__ == 'FasterWhisperBackend'
 
 
+@patch('viper.backends.resolver._has_mlx_whisper', return_value=True)
 @patch('platform.machine', return_value='arm64')
 @patch('platform.system', return_value='Darwin')
 @patch('viper.backends.resolver.get_config_value')
 def test_resolver_stt_auto_apple(
-    mock_config: MagicMock, mock_sys: MagicMock, mock_mach: MagicMock
+    mock_config: MagicMock,
+    mock_sys: MagicMock,
+    mock_mach: MagicMock,
+    mock_mlx: MagicMock,
 ) -> None:
     mock_config.side_effect = lambda key, default=None: {
         'VIPER_STT_BACKEND': 'auto',
