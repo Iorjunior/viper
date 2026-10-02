@@ -1,18 +1,65 @@
 """Apple Silicon MLX LM backend for local language models."""
 
-import json
-import re
 from typing import Any, override
 
 from viper.backends.llm.base import LLMBackend
 
 try:
-    from mlx_lm import generate, load
+    from mlx_lm import generate, load, stream_generate
+    from mlx_lm.sample_utils import make_sampler
 except ImportError:
     generate = None  # type: ignore[assignment]
     load = None  # type: ignore[assignment]
+    stream_generate = None  # type: ignore[assignment]
+    make_sampler = None  # type: ignore[assignment]
 
-DEFAULT_MLX_MODEL = 'mlx-community/Qwen2.5-1.5B-Instruct-4bit'
+DEFAULT_MLX_MODEL = 'mlx-community/translategemma-4b-it-4bit'
+
+
+def _resolve_stop_token_ids(tokenizer: Any) -> set[int]:
+    stop_ids: set[int] = set()
+    eos = getattr(tokenizer, 'eos_token_id', None)
+    if isinstance(eos, int):
+        stop_ids.add(eos)
+    elif isinstance(eos, (list, tuple, set)):
+        stop_ids.update(eos)
+
+    for word in ('<end_of_turn>', '<|im_end|>', '<|endoftext|>'):
+        try:
+            tok = tokenizer.convert_tokens_to_ids(word)
+            if isinstance(tok, int) and tok >= 0:
+                stop_ids.add(tok)
+        except Exception:
+            pass
+    return stop_ids
+
+
+def _build_chat_prompt(
+    model_name: str, tokenizer: Any, prompt: str, system: str
+) -> str:
+    if 'translategemma' in model_name.lower():
+        sys_part = f'{system}\n\n\n' if system else ''
+        return (
+            f'<start_of_turn>user\n'
+            f'{sys_part}{prompt}<end_of_turn>\n'
+            f'<start_of_turn>model\n'
+        )
+
+    if hasattr(tokenizer, 'apply_chat_template'):
+        messages: list[dict[str, str]] = []
+        if system:
+            messages.append({'role': 'system', 'content': system})
+        messages.append({'role': 'user', 'content': prompt})
+        try:
+            return str(
+                tokenizer.apply_chat_template(
+                    messages, tokenize=False, add_generation_prompt=True
+                )
+            )
+        except Exception:
+            pass
+
+    return f'{system}\n\n{prompt}' if system else prompt
 
 
 class MlxLmBackend(LLMBackend):
@@ -34,76 +81,43 @@ class MlxLmBackend(LLMBackend):
 
     @override
     def generate(self, prompt: str, system: str = '') -> str:
-        if generate is None:
+        if stream_generate is None:
             msg = 'mlx-lm is not installed. Install with uv sync --extra apple'
             raise ImportError(msg)
 
         model, tokenizer = self._load_model()
+        formatted_prompt = _build_chat_prompt(
+            self.model_name, tokenizer, prompt, system
+        )
+        stop_token_ids = _resolve_stop_token_ids(tokenizer)
 
-        messages: list[dict[str, str]] = []
-        if system:
-            messages.append({'role': 'system', 'content': system})
-        messages.append({'role': 'user', 'content': prompt})
-
-        if hasattr(tokenizer, 'apply_chat_template'):
-            formatted_prompt = tokenizer.apply_chat_template(
-                messages, tokenize=False, add_generation_prompt=True
-            )
-        else:
-            formatted_prompt = f'{system}\n\n{prompt}' if system else prompt
-
-        output = generate(
+        sampler = make_sampler(temp=0.0) if make_sampler else None
+        collected: list[str] = []
+        for resp in stream_generate(
             model,
             tokenizer,
             prompt=formatted_prompt,
-            max_tokens=1024,
-            verbose=False,
+            max_tokens=512,
+            sampler=sampler,
+        ):
+            if (
+                resp.token in stop_token_ids
+                or '<end_of_turn>' in resp.text
+                or '<|im_end|>' in resp.text
+                or '<|endoftext|>' in resp.text
+            ):
+                break
+            collected.append(resp.text)
+
+        output_str = ''.join(collected).strip()
+        stop_tokens = (
+            '<end_of_turn>',
+            '<start_of_turn>',
+            '<|im_end|>',
+            '<|endoftext|>',
         )
-        return str(output).strip()
+        for stop in stop_tokens:
+            if stop in output_str:
+                output_str = output_str.split(stop, 1)[0].strip()
 
-    @override
-    def translate(
-        self,
-        segments: list[str],
-        target_language: str,
-        durations: list[float] | None = None,
-    ) -> list[str]:
-        if not segments:
-            return []
-
-        system_prompt = (
-            f'You are an expert audio dubbing translator into '
-            f'{target_language}. '
-            'Translate each segment naturally and concisely for timing. '
-            'Output ONLY a valid JSON list of translated strings matching '
-            'the exact input count. No extra text.'
-        )
-
-        user_content = json.dumps(segments, ensure_ascii=False)
-        raw_output = self.generate(user_content, system=system_prompt)
-
-        try:
-            parsed = json.loads(raw_output)
-            if isinstance(parsed, list) and len(parsed) == len(segments):
-                return [str(s).strip() for s in parsed]
-        except json.JSONDecodeError:
-            pass
-
-        match = re.search(r'\[.*\]', raw_output, re.DOTALL)
-        if match:
-            try:
-                parsed = json.loads(match.group(0))
-                if isinstance(parsed, list) and len(parsed) == len(segments):
-                    return [str(s).strip() for s in parsed]
-            except json.JSONDecodeError:
-                pass
-
-        lines = [
-            line.strip('- *"\t')
-            for line in raw_output.splitlines()
-            if line.strip()
-        ]
-        if len(lines) == len(segments):
-            return lines
-
-        return segments
+        return output_str

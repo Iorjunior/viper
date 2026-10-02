@@ -166,9 +166,7 @@ def test_validate_connection_auth_failure(client: TestClient) -> None:
 
 def test_download_model_endpoint(client: TestClient) -> None:
     """Test model download triggering."""
-    with patch(
-        'viper.server.routes.setup.snapshot_download'
-    ) as mock_download:
+    with patch('viper.server.routes.setup.snapshot_download') as mock_download:
         mock_download.return_value = '/fake/cache/path'
 
         resp = client.post(

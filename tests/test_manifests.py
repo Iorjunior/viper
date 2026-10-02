@@ -1,19 +1,24 @@
-"""Unit tests for pipeline manifests and manifest loader."""
-
 import json
 from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 import pytest
 from pydantic import ValidationError
 
 import viper.stages  # noqa: F401
+from viper.backends.stt.base import Segment, Transcription
 from viper.engine.manifest_loader import (
     ManifestLoader,
     get_manifest,
     load_manifest,
     load_manifests_from_dir,
 )
-from viper.engine.models import PipelineManifest, PipelineStageConfig
+from viper.engine.models import (
+    PipelineManifest,
+    PipelineStageConfig,
+    RunStatus,
+)
+from viper.engine.orchestrator import Orchestrator
 from viper.engine.registry import global_registry
 
 
@@ -147,3 +152,63 @@ def test_manifest_loader_class_and_get_manifest() -> None:
 
     missing = get_manifest('non_existent_pipeline')
     assert missing is None
+
+
+@pytest.mark.asyncio
+async def test_full_dubbing_pipeline_execution(tmp_path: Path) -> None:
+    """Test full_dubbing pipeline runs end-to-end without type errors."""
+    manifest = get_manifest('full_dubbing')
+    assert manifest is not None
+
+    video_file = tmp_path / 'source.mp4'
+    video_file.write_bytes(b'video')
+
+    mock_stt = MagicMock()
+    mock_stt.transcribe.return_value = Transcription(
+        language='en',
+        segments=[Segment(start=0.0, end=2.0, text='Hello world')],
+    )
+
+    mock_llm = MagicMock()
+    mock_llm.translate.return_value = ['Olá mundo']
+
+    mock_tts = MagicMock()
+    mock_tts.sample_rate = 24000
+
+    def fake_synthesize(
+        text: str, destination: Path, **kwargs: object
+    ) -> None:
+        destination.write_bytes(b'synth_audio')
+
+    mock_tts.synthesize.side_effect = fake_synthesize
+
+    def fake_subproc_run(cmd: list[str], **kwargs: object) -> MagicMock:
+        # Create output files if ffmpeg or demucs is called
+        for arg in cmd:
+            if str(arg).endswith('.wav') or str(arg).endswith('.mp4'):
+                p = Path(arg)
+                p.parent.mkdir(parents=True, exist_ok=True)
+                p.touch()
+        return MagicMock(returncode=0)
+
+    with (
+        patch('subprocess.run', side_effect=fake_subproc_run),
+        patch('viper.stages.speech.get_stt', return_value=mock_stt),
+        patch('viper.stages.text.get_llm', return_value=mock_llm),
+        patch('viper.stages.speech.get_tts', return_value=mock_tts),
+    ):
+        orchestrator = Orchestrator()
+        result = await orchestrator.run(
+            manifest,
+            inputs={
+                'source': str(video_file),
+                'target_language': 'pt-BR',
+                'voice': 'pf_dora',
+            },
+        )
+
+        assert result.status == RunStatus.COMPLETED, (
+            f'Pipeline failed: {result.error}'
+        )
+        assert 'render' in result.stage_results
+        assert 'video' in result.stage_results['render']

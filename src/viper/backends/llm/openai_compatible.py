@@ -1,7 +1,5 @@
 """OpenAI-compatible LLM backend for OpenAI, Ollama, vLLM, and others."""
 
-import json
-import re
 from typing import override
 
 from openai import OpenAI
@@ -52,50 +50,3 @@ class OpenAICompatibleBackend(LLMBackend):
 
         choice = response.choices[0]
         return str(choice.message.content or '').strip()
-
-    @override
-    def translate(
-        self,
-        segments: list[str],
-        target_language: str,
-        durations: list[float] | None = None,
-    ) -> list[str]:
-        if not segments:
-            return []
-
-        system_prompt = (
-            f'You are an expert audio dubbing translator into '
-            f'{target_language}. '
-            'Translate each segment naturally and concisely for timing. '
-            'Output ONLY a valid JSON list of translated strings matching '
-            'the exact input count. No extra text.'
-        )
-
-        user_content = json.dumps(segments, ensure_ascii=False)
-        raw_output = self.generate(user_content, system=system_prompt)
-
-        try:
-            parsed = json.loads(raw_output)
-            if isinstance(parsed, list) and len(parsed) == len(segments):
-                return [str(s).strip() for s in parsed]
-        except json.JSONDecodeError:
-            pass
-
-        match = re.search(r'\[.*\]', raw_output, re.DOTALL)
-        if match:
-            try:
-                parsed = json.loads(match.group(0))
-                if isinstance(parsed, list) and len(parsed) == len(segments):
-                    return [str(s).strip() for s in parsed]
-            except json.JSONDecodeError:
-                pass
-
-        lines = [
-            line.strip('- *"\t')
-            for line in raw_output.splitlines()
-            if line.strip()
-        ]
-        if len(lines) == len(segments):
-            return lines
-
-        return segments

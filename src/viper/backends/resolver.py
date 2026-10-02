@@ -1,5 +1,4 @@
-"""Hardware detection and backend instance resolver."""
-
+import importlib.util
 import platform
 from typing import Any
 
@@ -34,6 +33,18 @@ def _has_cuda() -> bool:
         return False
 
 
+def _has_mlx_whisper() -> bool:
+    if not _is_apple_silicon():
+        return False
+    return importlib.util.find_spec('mlx_whisper') is not None
+
+
+def _has_mlx_lm() -> bool:
+    if not _is_apple_silicon():
+        return False
+    return importlib.util.find_spec('mlx_lm') is not None
+
+
 def detect_hardware() -> dict[str, Any]:
     """Detect system environment, accelerators and suggested profile."""
     is_mac_arm = _is_apple_silicon()
@@ -47,6 +58,7 @@ def detect_hardware() -> dict[str, Any]:
         'is_apple_silicon': is_mac_arm,
         'has_cuda': cuda,
         'recommended_mode': recommended_mode,
+        'has_mlx': _has_mlx_whisper() and _has_mlx_lm(),
     }
 
 
@@ -55,7 +67,7 @@ def get_stt(**kwargs: Any) -> STTBackend:
     backend = get_config_value('VIPER_STT_BACKEND', default='auto').lower()
 
     if backend == 'auto':
-        if _is_apple_silicon():
+        if _is_apple_silicon() and _has_mlx_whisper():
             return MlxWhisperBackend(**kwargs)
         device = 'cuda' if _has_cuda() else 'cpu'
         return FasterWhisperBackend(device=device, **kwargs)
@@ -86,7 +98,7 @@ def get_llm(**kwargs: Any) -> LLMBackend:
     api_key = get_config_value('OPENAI_API_KEY', default=OPENAI_API_KEY)
 
     if backend == 'auto':
-        if _is_apple_silicon():
+        if _is_apple_silicon() and _has_mlx_lm():
             return MlxLmBackend(**kwargs)
         return OpenAICompatibleBackend(
             base_url=base_url or None,

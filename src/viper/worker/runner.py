@@ -3,6 +3,7 @@
 import asyncio
 import json
 import logging
+from dataclasses import asdict, is_dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -25,7 +26,7 @@ logger = logging.getLogger('viper.worker.runner')
 
 
 def serialize_output(obj: Any) -> Any:
-    """Recursively convert assets and paths to JSON-serializable structures."""
+    """Recursively convert objects to JSON-serializable structures."""
     if isinstance(obj, BaseAsset):
         data: dict[str, Any] = {
             'path': str(obj.path),
@@ -36,12 +37,23 @@ def serialize_output(obj: Any) -> Any:
                 if k != 'path':
                     data[k] = serialize_output(v)
         return data
+
     if isinstance(obj, Path):
         return str(obj)
+
+    if is_dataclass(obj) and not isinstance(obj, type):
+        obj = asdict(obj)
+    elif hasattr(obj, 'model_dump') and callable(obj.model_dump):
+        obj = obj.model_dump()
+    elif hasattr(obj, '__dict__') and not isinstance(obj, type):
+        obj = {k: v for k, v in obj.__dict__.items() if not k.startswith('_')}
+
     if isinstance(obj, dict):
         return {str(k): serialize_output(v) for k, v in obj.items()}
+
     if isinstance(obj, (list, tuple, set)):
         return [serialize_output(i) for i in obj]
+
     return obj
 
 
@@ -127,7 +139,7 @@ class WorkerRunner:
             "[Run %s] Stage '%s' completed successfully", run_id, stage_id
         )
         serialized = serialize_output(output)
-        output_json = json.dumps(serialized)
+        output_json = json.dumps(serialized, default=str)
         async with async_session_maker() as s:
             s_repo = StageRunRepository(s)
             a_repo = AssetRepository(s)
@@ -194,7 +206,7 @@ class WorkerRunner:
                 await run_repo.update_status(
                     run_id=run_id,
                     status='completed',
-                    outputs=json.dumps(serialized),
+                    outputs=json.dumps(serialized, default=str),
                     finished_at=datetime.now(timezone.utc),
                 )
                 await self.ws.broadcast(

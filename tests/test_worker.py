@@ -14,6 +14,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 import viper.worker.main as worker_main
 import viper.worker.queue as queue_mod
 import viper.worker.runner as runner_mod
+from viper.backends.stt.base import Segment, Transcription
 from viper.db.models import Run
 from viper.db.repositories import (
     AssetRepository,
@@ -121,18 +122,29 @@ async def test_enqueue_pending_from_db(memory_db: None) -> None:
 
 
 def test_serialize_output_types() -> None:
-    """Test recursive serialization of assets, paths, and collections."""
+    """Test serialization of assets, dataclasses, and collections."""
     asset = AudioAsset(path=Path('/tmp/test.wav'), duration=3.5)
+    transcription = Transcription(
+        language='en',
+        segments=[Segment(start=0.0, end=1.5, text='Hello')],
+    )
     data = {
         'audio': asset,
         'path': Path('/tmp/video.mp4'),
         'nested': {'items': [1, Path('/tmp/file.txt')]},
+        'transcription': transcription,
     }
     serialized = serialize_output(data)
     assert serialized['audio']['path'] == '/tmp/test.wav'
     assert serialized['audio']['duration'] == 3.5
     assert serialized['path'] == '/tmp/video.mp4'
     assert serialized['nested']['items'][1] == '/tmp/file.txt'
+    assert serialized['transcription']['language'] == 'en'
+    assert serialized['transcription']['segments'][0]['text'] == 'Hello'
+
+    # Ensure json.dumps works without error
+    dumped = json.dumps(serialized)
+    assert 'Hello' in dumped
 
 
 @pytest.mark.asyncio

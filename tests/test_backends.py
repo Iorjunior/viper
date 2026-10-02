@@ -282,6 +282,9 @@ def test_mlx_whisper_import_error(tmp_path: Path) -> None:
 
 def test_mlx_lm_backend() -> None:
     backend = MlxLmBackend(model='fake-model')
+    mock_resp = MagicMock()
+    mock_resp.token = 100
+    mock_resp.text = '["Traduzido"]'
 
     with (
         patch(
@@ -289,8 +292,8 @@ def test_mlx_lm_backend() -> None:
             return_value=(MagicMock(), MagicMock()),
         ),
         patch(
-            'viper.backends.llm.mlx_lm.generate',
-            return_value='["Traduzido"]',
+            'viper.backends.llm.mlx_lm.stream_generate',
+            return_value=[mock_resp],
         ),
     ):
         gen = backend.generate('prompt')

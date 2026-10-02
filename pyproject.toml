@@ -31,11 +31,12 @@ dependencies = [
     "tqdm>=4.70",
     "openai>=1.0",
     "greenlet>=3.5.6",
+    "mlx-lm>=0.31; sys_platform == 'darwin' and platform_machine == 'arm64'",
+    "mlx-whisper>=0.4; sys_platform == 'darwin' and platform_machine == 'arm64'",
 ]
 
 [project.optional-dependencies]
-apple  = ["mlx-lm>=0.31", "mlx-whisper>=0.4"]
-dev    = ["pytest>=8.0", "pytest-asyncio>=0.24", "pytest-cov>=5.0", "ruff>=0.8", "pyright>=1.1"]
+dev = ["pytest>=8.0", "pytest-asyncio>=0.24", "pytest-cov>=5.0", "ruff>=0.8", "pyright>=1.1"]
 
 [project.scripts]
 viper-server = "viper.main:serve"

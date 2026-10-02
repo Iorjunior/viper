@@ -34,6 +34,7 @@ class MlxWhisperBackend(STTBackend):
         options: dict[str, Any] = {
             'path_or_hf_repo': self.model,
             'temperature': 0.0,
+            'condition_on_previous_text': False,
         }
         if language is not None:
             options['language'] = language
