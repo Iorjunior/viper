@@ -1,7 +1,7 @@
 """Apple Silicon MLX Whisper STT backend."""
 
 from pathlib import Path
-from typing import Any, override
+from typing import Any, cast, override
 
 from viper.backends.stt.base import Segment, STTBackend, Transcription
 
@@ -39,19 +39,25 @@ class MlxWhisperBackend(STTBackend):
         if language is not None:
             options['language'] = language
 
-        result = mlx_whisper.transcribe(str(path), **options)
+        result_any: Any = mlx_whisper.transcribe(str(path), **options)
+        result: dict[str, Any] = cast(dict[str, Any], result_any)
 
-        raw_segments = result.get('segments', [])
+        raw_segments = cast(list[dict[str, Any]], result.get('segments', []))
         segments = [
             Segment(
                 start=round(float(seg['start']), 3),
                 end=round(float(seg['end']), 3),
-                text=seg['text'].strip(),
+                text=str(seg['text']).strip(),
             )
             for seg in raw_segments
         ]
 
+        detected_lang = result.get('language')
+        final_lang = (
+            str(detected_lang) if detected_lang else (language or 'en')
+        )
+
         return Transcription(
-            language=result.get('language') or language or 'en',
+            language=final_lang,
             segments=segments,
         )

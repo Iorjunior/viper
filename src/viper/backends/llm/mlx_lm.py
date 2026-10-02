@@ -76,7 +76,8 @@ class MlxLmBackend(LLMBackend):
             raise ImportError(msg)
 
         if self._model is None or self._tokenizer is None:
-            self._model, self._tokenizer = load(self.model_name)
+            loaded = load(self.model_name)
+            self._model, self._tokenizer = loaded[0], loaded[1]
         return self._model, self._tokenizer
 
     @override

@@ -43,8 +43,8 @@ def serialize_output(obj: Any) -> Any:
 
     if is_dataclass(obj) and not isinstance(obj, type):
         obj = asdict(obj)
-    elif hasattr(obj, 'model_dump') and callable(obj.model_dump):
-        obj = obj.model_dump()
+    elif callable(getattr(obj, 'model_dump', None)):
+        obj = getattr(obj, 'model_dump')()
     elif hasattr(obj, '__dict__') and not isinstance(obj, type):
         obj = {k: v for k, v in obj.__dict__.items() if not k.startswith('_')}
 

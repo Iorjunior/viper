@@ -28,9 +28,13 @@ def ensure_path(
                 return ensure_path(val[key], preferred_keys)
         if val:
             return ensure_path(next(iter(val.values())), preferred_keys)
+        msg = 'Cannot extract path from an empty dictionary'
+        raise ValueError(msg)
     if isinstance(val, BaseAsset):
         return val.path
-    return Path(val)
+    if isinstance(val, Path):
+        return val
+    return Path(str(val))
 
 
 @dataclass
