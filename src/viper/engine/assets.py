@@ -1,17 +1,36 @@
-"""Typed media assets for stage inputs and outputs."""
-
+import os
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 
 @dataclass
-class BaseAsset:
+class BaseAsset(os.PathLike[str]):
     """Base class for all media and data assets."""
 
     path: Path = field(default_factory=Path)
 
     def __str__(self) -> str:
         return str(self.path)
+
+    def __fspath__(self) -> str:
+        return str(self.path)
+
+
+def ensure_path(
+    val: Any,
+    preferred_keys: tuple[str, ...] = ('video', 'audio', 'file', 'path'),
+) -> Path:
+    """Extract a filesystem Path from a path, asset, or output dictionary."""
+    if isinstance(val, dict):
+        for key in preferred_keys:
+            if key in val and val[key] is not None:
+                return ensure_path(val[key], preferred_keys)
+        if val:
+            return ensure_path(next(iter(val.values())), preferred_keys)
+    if isinstance(val, BaseAsset):
+        return val.path
+    return Path(val)
 
 
 @dataclass

@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from viper.config import VIPER_MEDIA_DIR
-from viper.engine.assets import AudioAsset
+from viper.engine.assets import AudioAsset, ensure_path
 from viper.engine.decorator import stage
 
 
@@ -14,12 +14,12 @@ from viper.engine.decorator import stage
     description='Extract uncompressed WAV audio from video',
 )
 def extract_audio(
-    video: str | Path,
+    video: str | Path | Any,
     output_path: str | Path | None = None,
     sample_rate: int = 24000,
 ) -> dict[str, Any]:
     """Extract audio track as mono WAV using FFmpeg."""
-    src = Path(video)
+    src = ensure_path(video, ('video', 'file', 'path'))
     dest = (
         Path(output_path)
         if output_path
@@ -60,11 +60,11 @@ def extract_audio(
     description='Separate vocals and accompaniment music from audio track',
 )
 def separate_vocals(
-    audio: str | Path,
+    audio: str | Path | Any,
     output_dir: str | Path | None = None,
 ) -> dict[str, Any]:
     """Isolate vocals and background stems using Demucs."""
-    src = Path(audio)
+    src = ensure_path(audio, ('audio', 'vocals', 'file', 'path'))
     target_dir = Path(output_dir or VIPER_MEDIA_DIR)
     target_dir.mkdir(parents=True, exist_ok=True)
 
@@ -81,7 +81,19 @@ def separate_vocals(
 
     subprocess.run(cmd, capture_output=True, text=True, check=False)
 
-    # In case files were generated inside a subfolder or fallback
+    demucs_vocals = list(target_dir.glob(f'**/{src.stem}/vocals.wav'))
+    demucs_no_vocals = list(target_dir.glob(f'**/{src.stem}/no_vocals.wav'))
+    if demucs_vocals and not vocals_path.exists():
+        try:
+            demucs_vocals[0].replace(vocals_path)
+        except Exception:
+            vocals_path = demucs_vocals[0]
+    if demucs_no_vocals and not accompaniment_path.exists():
+        try:
+            demucs_no_vocals[0].replace(accompaniment_path)
+        except Exception:
+            accompaniment_path = demucs_no_vocals[0]
+
     if not vocals_path.exists():
         vocals_path.touch()
     if not accompaniment_path.exists():
@@ -90,4 +102,5 @@ def separate_vocals(
     return {
         'vocals': AudioAsset(path=vocals_path),
         'accompaniment': AudioAsset(path=accompaniment_path),
+        'background': AudioAsset(path=accompaniment_path),
     }
